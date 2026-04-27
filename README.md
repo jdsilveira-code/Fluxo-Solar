@@ -12,3 +12,14 @@ modules/: Pasta contendo as implementações específicas de cada fabricante (So
 .env: Arquivo para armazenamento de chaves de API e tokens (não incluso no repositório).
 
 clientes.xlsx: Base de dados local com as informações das usinas.
+
+Marcas Suportadas
+Solis (Implementado)
+
+Growatt (Implementado)
+
+Solplanet (Em desenvolvimento)
+
+Fronius (Planejado)
+
+Canadian Solar (Planejado)
