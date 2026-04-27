@@ -1,4 +1,4 @@
-#Fluxo Solar
+Fluxo Solar
 Sistema de monitoramento automatizado para usinas fotovoltaicas. O software integra APIs de diferentes fabricantes de inversores para centralizar o status de operação dos clientes em uma planilha Excel.
 
 Funcionamento
