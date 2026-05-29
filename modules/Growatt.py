@@ -2,6 +2,7 @@ import requests
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from modules.utils import limpar_e_comparar_nomes
 
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
@@ -176,12 +177,10 @@ def traduzir_status(nome_cliente, lista_growatt):
 
     Retorno: (str_status, str_data_ou_vazio)
     """
-    nome_busca = nome_cliente.strip().lower()
-
     for usina in lista_growatt:
-        nome_api = usina.get("name", "").strip().lower()
+        nome_api = usina.get("name") or ""
 
-        if nome_busca in nome_api:
+        if limpar_e_comparar_nomes(nome_cliente, nome_api):
             status = usina.get("status")
             last_update = _buscar_last_update(usina.get("plant_id")) or ""
 

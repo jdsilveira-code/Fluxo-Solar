@@ -8,6 +8,7 @@ import locale
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from modules.utils import limpar_e_comparar_nomes
 
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
@@ -70,7 +71,7 @@ def buscar_dados_completos():
 def traduzir_status(nome_cliente, lista_solis):
     """
     Filtra o status e padroniza para o retorno do sistema.
-    Retorna uma tupla (str_status, str_last_update).
+    Retorna uma tupla (str_status, str_last_update, float_etoday, float_e_month).
 
     Mapeamento de status Solis:
       1 = On-line
@@ -78,26 +79,30 @@ def traduzir_status(nome_cliente, lista_solis):
       3 = Alarme
     """
     for estacao in lista_solis:
-        nome_api = estacao.get("stationName", "")
-        if nome_cliente.strip().lower() in nome_api.lower():
+        nome_api = estacao.get("stationName") or ""
+        if limpar_e_comparar_nomes(nome_cliente, nome_api):
             estado = estacao.get("state")
-            # dataTimestamp vem em milissegundos (Unix), convertemos para string legível
             ts = estacao.get("dataTimestamp")
             if ts:
                 try:
                     dt = datetime.datetime.fromtimestamp(int(ts) / 1000)
-                    last_update = dt.strftime("%Y-%m-%d %H:%M:%S")
+                    last_update = dt.strftime("%d/%m/%Y %H:%M")
                 except Exception:
                     last_update = ""
             else:
                 last_update = ""
 
-            if estado == 1:
-                return "On-line", last_update
-            if estado == 2:
-                return "Off-line", last_update
-            if estado == 3:
-                return "Alarme", last_update
-            return f"Erro ({estado})", last_update
+            # dayEnergy1 / monthEnergy1 são sempre em kWh; os campos sem sufixo
+            # podem ser normalizados para MWh pela API em usinas de grande geração.
+            etoday  = estacao.get("dayEnergy1")
+            e_month = estacao.get("monthEnergy1")
 
-    return "Não encontrado", ""
+            if estado == 1:
+                return "On-line", last_update, etoday, e_month
+            if estado == 2:
+                return "Off-line", last_update, etoday, e_month
+            if estado == 3:
+                return "Alarme", last_update, etoday, e_month
+            return f"Erro ({estado})", last_update, etoday, e_month
+
+    return "Não encontrado", "", None, None
