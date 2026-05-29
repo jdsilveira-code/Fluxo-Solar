@@ -1,0 +1,44 @@
+====================================================================
+               CLAUDE CODE - CHEAT SHEET DO PSICOPATA
+====================================================================
+
+[ GERENCIAMENTO DE CONTEXTO E COTA (O MAIS IMPORTANTE NO PLANO PRO) ]
+
+/clear
+-> O que faz: Limpa todo o histórico da conversa atual.
+-> Quando usar: SEMPRE que mudar de arquivo, módulo ou tarefa. 
+   O contexto longo destrói o limite de mensagens do plano Pro. Mudou 
+   de Fronius para Growatt? /clear na hora!
+
+/compact
+-> O que faz: Resume a conversa, salva as decisões e joga fora os 
+   erros antigos.
+-> Quando usar: Sessões longas de debug na mesma tarefa. Quando você 
+   não pode dar /clear para não perder o raciocínio, mas precisa aliviar 
+   o peso do histórico.
+
+[ CONTROLE DE COMPORTAMENTO E EXECUÇÃO ]
+
+Shift + Tab (Modo Plano)
+-> O que faz: O Claude para de codar e apenas cria um plano de ação 
+   para você aprovar.
+-> Quando usar: Antes de refatorar arquivos vitais como o main.py ou 
+   alterar a arquitetura. Evita que a IA saia quebrando tudo e 
+   gastando cota do Pro para consertar os próprios erros.
+
+/effort [low/medium/high]
+-> O que faz: Controla a profundidade do "raciocínio" do modelo.
+-> Quando usar: Coloque "/effort low" para criar documentações, 
+   renomear variáveis ou fazer regex simples. Economiza tempo e limite.
+
+[ DIAGNÓSTICO RÁPIDO ]
+
+/bug
+-> O que faz: Caça os últimos erros nos logs ou saídas de terminal.
+-> Quando usar: Quando o Python cuspir um traceback gigante, use /bug 
+   para ele achar a origem sem você precisar copiar e colar nada.
+
+====================================================================
+LEMBRETE MENTAL: No plano Pro, Contexto Longo = Menos Mensagens.
+Seja letal. Envie apenas o necessário.
+====================================================================

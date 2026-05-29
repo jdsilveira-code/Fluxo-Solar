@@ -86,10 +86,10 @@ def _buscar_usinas_do_cliente(c_user_name):
     return usinas, None
 
 
-def _buscar_last_update(plant_id):
+def _buscar_dados_planta(plant_id):
     """
-    Busca o last_update_time de uma usina via /v1/plant/data.
-    Retorna a string da data ou None em caso de falha.
+    Busca last_update_time, today_energy e monthly_energy via /v1/plant/data.
+    Retorna dict com os três campos (strings vazias em caso de falha).
     """
     try:
         r = requests.get(
@@ -100,10 +100,15 @@ def _buscar_last_update(plant_id):
         )
         res = r.json()
         if res.get("error_code") == 0:
-            return res.get("data", {}).get("last_update_time")
+            d = res.get("data", {})
+            return {
+                "last_update": d.get("last_update_time") or "",
+                "etoday":      d.get("today_energy") or "",
+                "e_month":     d.get("monthly_energy") or "",
+            }
     except Exception as e:
         print(f"[Growatt] Erro ao buscar dados da usina {plant_id}: {e}")
-    return None
+    return {"last_update": "", "etoday": "", "e_month": ""}
 
 
 def buscar_dados_completos():
@@ -167,7 +172,7 @@ def buscar_dados_completos():
 def traduzir_status(nome_cliente, lista_growatt):
     """
     Busca a usina pelo nome do cliente (lógica 'in') e retorna
-    uma tupla (status, last_update_time) padronizada.
+    uma tupla (status, last_update, etoday, e_month) padronizada.
 
     Mapeamento de status Growatt:
       1 = On-line
@@ -175,24 +180,24 @@ def traduzir_status(nome_cliente, lista_growatt):
       3 = Alarme
       4 = Sem dados  (usina sem dispositivos associados)
 
-    Retorno: (str_status, str_data_ou_vazio)
+    Retorno: (str_status, str_data_ou_vazio, str_geracao_hoje, str_geracao_mensal)
     """
     for usina in lista_growatt:
         nome_api = usina.get("name") or ""
 
         if limpar_e_comparar_nomes(nome_cliente, nome_api):
             status = usina.get("status")
-            last_update = _buscar_last_update(usina.get("plant_id")) or ""
+            dados = _buscar_dados_planta(usina.get("plant_id"))
 
             if status == 1:
-                return "On-line", last_update
+                return "On-line", dados["last_update"], dados["etoday"], dados["e_month"]
             elif status == 2:
-                return "Off-line", last_update
+                return "Off-line", dados["last_update"], dados["etoday"], dados["e_month"]
             elif status == 3:
-                return "Alarme", last_update
+                return "Alarme", dados["last_update"], dados["etoday"], dados["e_month"]
             elif status == 4:
-                return "Sem dados", last_update
+                return "Sem dados", dados["last_update"], dados["etoday"], dados["e_month"]
             else:
-                return f"Desconhecido ({status})", last_update
+                return f"Desconhecido ({status})", dados["last_update"], dados["etoday"], dados["e_month"]
 
-    return "Não encontrado", ""
+    return "Não encontrado", "", "", ""

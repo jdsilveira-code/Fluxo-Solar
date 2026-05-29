@@ -30,6 +30,34 @@ revisão manual, caso o matching bidirecional ainda não seja suficiente.
 
 ---
 
+## [2026-05-29] — Adição de geração diária e mensal ao módulo Growatt
+
+**Arquivos alterados:** `modules/Growatt.py`, `main.py`
+
+**Campos mapeados:**
+| Dado            | Chave na API       | Coluna Excel | Endpoint                |
+|-----------------|--------------------|--------------|-------------------------|
+| Geração hoje    | `today_energy`     | I (col 9)    | `/v1/plant/data`        |
+| Geração mensal  | `monthly_energy`   | J (col 10)   | `/v1/plant/data`        |
+
+**Alteração em `modules/Growatt.py`:**
+- Função `_buscar_last_update` renomeada para `_buscar_dados_planta`.
+  Agora retorna dict `{"last_update": str, "etoday": str, "e_month": str}`.
+- `traduzir_status` passou a retornar 4-tupla:
+  `(status, last_update, etoday, e_month)` — matching bidirecional intocado.
+
+**Alteração em `main.py`:**
+- Adicionado bloco `if "growatt" in marcas_presentes:` para popular `base_growatt`.
+- Adicionado bloco `elif marca == "growatt":` no loop de escrita que mapeia os
+  4 valores para colunas 7, 8, 9 e 10 (G, H, I, J).
+
+**Contexto do reconhecimento:**
+O endpoint `/v1/plant/user_plant_list` NÃO retorna `today_energy`/`monthly_energy`.
+Ambos estão exclusivamente em `/v1/plant/data`, já chamado por `_buscar_dados_planta`.
+Nota: a chave é `monthly_energy` (não `month_energy`).
+
+---
+
 ## [2026-05-13] — Simplificação do growatt_match.py: saída para arquivo próprio
 
 **Arquivo alterado:** `growatt_match.py`

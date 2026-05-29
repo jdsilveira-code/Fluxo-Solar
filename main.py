@@ -65,6 +65,11 @@ def main():
         base_hypontech = hypontech_buscar()
         _log(f"Hypontech: {len(base_hypontech)} usinas carregadas.")
 
+    if "growatt" in marcas_presentes:
+        _log("Conectando ao Growatt OpenAPI...")
+        base_growatt = growatt_buscar()
+        _log(f"Growatt: {len(base_growatt)} usinas carregadas.")
+
     # ── Processamento da planilha ─────────────────────────────
     print(f"\n{SEP}")
     print("  ETAPA 2 — Processamento da planilha")
@@ -114,6 +119,14 @@ def main():
             continue
         elif marca == "hypontech":
             status, last_update, etoday, e_month = hypontech_status(nome, base_hypontech)
+            sheet.cell(row=row, column=7).value  = status
+            sheet.cell(row=row, column=8).value  = last_update
+            sheet.cell(row=row, column=9).value  = etoday
+            sheet.cell(row=row, column=10).value = e_month
+            processados += 1
+            continue
+        elif marca == "growatt":
+            status, last_update, etoday, e_month = growatt_status(nome, base_growatt)
             sheet.cell(row=row, column=7).value  = status
             sheet.cell(row=row, column=8).value  = last_update
             sheet.cell(row=row, column=9).value  = etoday
