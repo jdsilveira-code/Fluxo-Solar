@@ -1,0 +1,8 @@
+.env
+__pycache__/
+clientes.xlsx
+~$*.xlsx
+Thumbs.db
+desktop.ini
+*.zip
+*.json

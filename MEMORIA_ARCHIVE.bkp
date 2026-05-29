@@ -1,0 +1,162 @@
+# MEMORIA.md — Fluxo Solar
+
+Histórico técnico de decisões, bugs resolvidos e alterações relevantes.
+
+---
+
+## [2026-04-28] — Módulo Fronius: implementação final e integração no main.py
+
+**Arquivos alterados:** `modules/Fronius.py`, `main.py`
+
+**Descoberta crítica de autenticação:**
+A API Fronius Solar.web (SWQAPI) NÃO usa JWT via endpoint `/iam/jwt` na prática.
+Tentativas de autenticar via POST com body JSON retornaram erro 401 com a mensagem
+`"AccessKeyId and Value not sent."`.
+A autenticação correta é via **headers HTTP diretos** em cada requisição:
+
+- `AccessKeyId: <valor>`
+- `AccessKeyValue: <valor>`
+
+**Variáveis de ambiente (`.env`):**
+
+- `FRONIUS_API_ID` → header `AccessKeyId`
+- `FRONIUS_API_VALUE` → header `AccessKeyValue`
+
+**Estrutura final do módulo (`modules/Fronius.py`):**
+
+- `_cabecalhos()`: monta os headers com as credenciais
+- `buscar_dados_completos()`: GET paginado em `/pvsystems` com os headers; retorna lista de usinas
+- `traduzir_status(nome_cliente, lista_fronius)`: busca case-insensitive por nome; mapeia
+  `running` → On-line | `warning`/`error` → Alarme | `offline` → Off-line
+
+**Integração no `main.py`:**
+
+- Import adicionado: `from modules.Fronius import buscar_dados_completos as fronius_buscar, traduzir_status as fronius_status`
+- `base_fronius = []` inicializado junto com as outras bases
+- Bloco de sync: `if "fronius" in marcas_presentes` → chama `fronius_buscar()`
+- Bloco de processamento: `elif marca == "fronius"` → chama `fronius_status()`
+- Nenhuma outra funcionalidade do `main.py` foi alterada
+
+---
+
+## [2026-05-07] — Correção de dois bugs: matching Growatt e None na marca
+
+**Arquivos alterados:** `modules/Growatt.py`, `main.py`
+
+**Bug 1 — Matching unidirecional em `traduzir_status` (Growatt.py):**
+A lógica original `if nome_busca in nome_api` só funcionava quando o nome da planilha era
+subconjunto do nome da API (ex: planilha="DANIEL ROCHA" ⊂ api="DANIEL ROCHA").
+Para o caso inverso frequente (planilha="ADAIR CORREA - MARLUCIA", api="Adair Correa"),
+a busca falhava e retornava "Não encontrado" para ~95% dos clientes Growatt.
+**Correção:** condição expandida para bidirecional:
+`if nome_busca in nome_api or nome_api in nome_busca:`
+
+**Bug 2 — str(None) no campo marca (main.py):**
+Na linha `marca = str(sheet.cell(...).value).strip().lower()`, se a célula estivesse vazia
+(None), `str(None)` produzia a string literal `"none"` — truthy, logo não pulada pelo
+`if not marca: continue`, e sem match no elif → "Marca não mapeada".
+**Correção:** `str(sheet.cell(...).value or "").strip().lower()` garante string vazia,
+que é falsy e a linha é pulada corretamente.
+
+**Contexto adicional:**
+O commit 87f4d94 havia removido Growatt do `main.py`; o usuário o reinseriu manualmente
+(alterações não commitadas). O `growatt_match.py` é uma ferramenta auxiliar de diagnóstico:
+gera aba `Growatt_Match` no `clientes.xlsx` com nomes da planilha × nomes da API para
+revisão manual, caso o matching bidirecional ainda não seja suficiente.
+
+---
+
+## [2026-05-13] — Simplificação do growatt_match.py: saída para arquivo próprio
+
+**Arquivo alterado:** `growatt_match.py`
+
+**Alteração:** O script foi reescrito para focar exclusivamente nos nomes da API Growatt.
+Comportamento anterior: gerava aba `Growatt_Match` no `clientes.xlsx` com dois blocos
+(nomes da planilha × nomes da API) para comparação manual.
+Comportamento novo: cria um arquivo separado `growatt_nomes.xlsx` com apenas os nomes
+das usinas retornados pela API na coluna A (aba "Usinas Growatt"), em ordem alfabética.
+Isso simplifica o diagnóstico quando o objetivo é apenas inspecionar o que a API retorna.
+
+---
+
+## [2026-05-13] — Criação do fronius_match.py: exportação de nomes da API Fronius
+
+**Arquivo criado:** `fronius_match.py`
+
+**Comportamento:** Idêntico ao `growatt_match.py` simplificado. Chama `buscar_dados_completos()`
+do módulo Fronius, ordena os nomes (`u.get("name")`) alfabeticamente e gera `fronius_nomes.xlsx`
+com os nomes na coluna A (aba "Usinas Fronius"). Cabeçalho laranja (#FF6600) para diferenciar
+visualmente do arquivo Growatt (azul). Filtra entradas sem campo `name` antes de salvar.
+
+---
+
+## [2026-05-13] — Módulo Hypontech: implementação e integração no main.py
+
+**Arquivos criados/alterados:** `modules/Hypontech.py`, `main.py`
+
+**Autenticação:** POST `https://api.hypon.cloud/v2/login` com payload `{"username": email, "password": password}`.
+Token retornado em `data["data"]["token"]`. Caso `data["code"] == 40000`, a API sinaliza credencial inválida.
+
+**Listagem de usinas:** GET `/v2/plant/list2` com `Authorization: Bearer {token}`.
+Paginação via params `page` e `page_size=50`; loop encerra quando `len(lote) < page_size` ou lista vazia.
+Cada usina contém `plant_name`, `status` e `time`.
+
+**Mapeamento de status:**
+
+- `"normal"` → On-line
+- `"offline"` → Off-line
+- `"alarm"` / `"error"` / `"fault"` → Alarme
+
+**Matching:** bidirecional case-insensitive (`nome_busca in nome_api or nome_api in nome_busca`), mesmo padrão do fix Growatt de 2026-05-07.
+
+**Variáveis de ambiente (`.env`):** `HYPONTECH_EMAIL`, `HYPONTECH_PASSWORD`.
+
+**Integração no `main.py`:**
+
+- Import: `from modules.Hypontech import buscar_dados_completos as hypontech_buscar, traduzir_status as hypontech_status`
+- `base_hypontech = []` inicializado junto às outras bases
+- Bloco de sync: `if "hypontech" in marcas_presentes`
+- Bloco de processamento: `elif marca == "hypontech"`
+
+---
+
+## [2026-05-14] — Módulo Solplanet: implementação final e integração no main.py
+
+**Arquivos criados/alterados:** `modules/Solplanet.py`, `main.py`
+
+**Autenticação:** HMAC-SHA256 via headers `X-Ca-*` (mesmo padrão do `teste_solplanet.py`).
+A assinatura é gerada pela função `_gerar_assinatura()` que monta o `StringToSign` no formato:
+`METHOD\naccept\n\n\n\n` + headers ordenados + path + query string ordenada.
+
+**Variáveis de ambiente (`.env`):**
+- `SOLPLANET_ID` → `X-Ca-Key` e parâmetro `APP_KEY`
+- `SOLPLANET_SECRET` → chave HMAC
+- `SOLPLANET_TOKEN` → parâmetro `token` na query string
+
+**Endpoint:** GET `https://ap-southeast-1-api-genergal.aisweicloud.com/pro/getPlanListPro`
+Paginação via `pageNum`/`pageSize=50`; loop encerra quando `len(lote) < pageSize` ou lista vazia.
+Cada usina contém `name`, `status` e campos de data (`updateDate`, `lastUploadTime`).
+
+**Mapeamento de status (campo inteiro):**
+- `1` → On-line
+- `0` → Off-line
+- `2` → Alarme
+
+**Matching:** bidirecional case-insensitive (`nome_busca in nome_api or nome_api in nome_busca`), mesmo padrão dos módulos anteriores.
+
+**Integração no `main.py`:**
+- Import corrigido de `teste_solplanet` para `modules.Solplanet` (`buscar_dados_completos as solplanet_buscar`, `traduzir_status as solplanet_status`)
+- `base_solplanet = []` inicializado junto às outras bases
+- Bloco de sync: `if "solplanet" in marcas_presentes` → chama `solplanet_buscar()`
+- Bloco de processamento: `elif marca == "solplanet"` → chama `solplanet_status()`
+
+---
+
+## [2026-05-13] — Criação do solis_match.py: exportação de nomes da API Solis
+
+**Arquivo criado:** `solis_match.py`
+
+**Comportamento:** Mesmo padrão dos scripts Growatt e Fronius. Chama `buscar_dados_completos()`
+do módulo Solis, extrai o campo `stationName` (campo correto da API Solis, diferente de `name`
+usado pela Fronius), ordena alfabeticamente e gera `solis_nomes.xlsx` com os nomes na coluna A
+(aba "Usinas Solis"). Cabeçalho verde (#1F7A1F) para diferenciação visual.
