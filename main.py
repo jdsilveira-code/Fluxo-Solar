@@ -113,7 +113,13 @@ def main():
             processados += 1
             continue
         elif marca == "hypontech":
-            status, last_update = hypontech_status(nome, base_hypontech)
+            status, last_update, etoday, e_month = hypontech_status(nome, base_hypontech)
+            sheet.cell(row=row, column=7).value  = status
+            sheet.cell(row=row, column=8).value  = last_update
+            sheet.cell(row=row, column=9).value  = etoday
+            sheet.cell(row=row, column=10).value = e_month
+            processados += 1
+            continue
         else:
             status, last_update = "Marca não mapeada", ""
 

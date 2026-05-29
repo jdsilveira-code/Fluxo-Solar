@@ -28,4 +28,27 @@ Cada usina contém `plant_name`, `status` e `time`.
 - Import: `from modules.Hypontech import buscar_dados_completos as hypontech_buscar, traduzir_status as hypontech_status`
 - `base_hypontech = []` inicializado junto às outras bases
 - Bloco de sync: `if "hypontech" in marcas_presentes`
-- Bloco de processamento: `elif marca == "hypontech"`
+- Bloco de processamento: `elif marca == "hypontech"` — unpacks 4 valores e grava Col 7, 8, 9, 10
+
+---
+
+## [2026-05-29] — Adição de geração atual (Col I); limitação de geração mensal
+
+**Arquivos alterados:** `modules/Hypontech.py`, `main.py`
+
+**Reconhecimento da API:** endpoint `/v2/plant/list2` retorna por usina:
+`status`, `time`, `plant_name`, `e_today` (kWh do dia), `e_total` (acumulado histórico), `power` (W instantâneo).
+
+**Endpoints testados para e_month (todos retornaram 404):**
+`/v2/plant/detail`, `/v2/plant/energy`, `/v2/plant/chart`, `/v2/plant/stat`, `/v2/plant/generation`, `/v2/plant/data`
+
+**Limitação documentada:** A API Hypontech v2 **não expõe geração mensal por usina**. Campo `e_month` sempre retorna `None`.
+
+**`traduzir_status` agora retorna 4 valores:**
+`(status, last_update, etoday, e_month)` — padrão idêntico a Fronius/Solplanet/Solis.
+
+**Mapeamento de colunas:**
+- Col 7 → status
+- Col 8 → last_update
+- Col 9 → `e_today` (geração do dia em kWh)
+- Col 10 → `None` (mensal indisponível na API)

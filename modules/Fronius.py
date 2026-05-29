@@ -141,9 +141,6 @@ def buscar_dados_completos():
             except Exception:
                 sistema.update({"is_online": None, "last_update": "", "etoday": None, "e_month": None})
             concluidos += 1
-            if concluidos % _WORKERS == 0 or concluidos == len(com_id):
-                print(f"[Fronius]   {concluidos}/{n} processadas...")
-
     for s in sem_id:
         s.update({"is_online": None, "last_update": "", "etoday": None, "e_month": None})
 

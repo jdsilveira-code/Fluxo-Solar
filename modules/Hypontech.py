@@ -92,12 +92,14 @@ def buscar_dados_completos():
 
 def traduzir_status(nome_cliente, lista_hypontech):
     """
-    Localiza a usina pelo nome (case-insensitive, bidirecional) e retorna (status, last_update).
+    Localiza a usina pelo nome e retorna (status, last_update, etoday, e_month).
 
     Mapeamento do campo 'status' da API Hypontech:
       "normal"                    → On-line
       "offline"                   → Off-line
       "alarm" / "error" / "fault" → Alarme
+
+    Nota: a API v2 não expõe geração mensal por usina; e_month sempre retorna None.
     """
     for usina in lista_hypontech:
         nome_api = usina.get("plant_name") or ""
@@ -105,13 +107,15 @@ def traduzir_status(nome_cliente, lista_hypontech):
         if limpar_e_comparar_nomes(nome_cliente, nome_api):
             estado      = (usina.get("status") or "").lower()
             last_update = usina.get("time", "")
+            etoday      = usina.get("e_today")
 
             if estado == "normal":
-                return "On-line", last_update
+                return "On-line", last_update, etoday, None
             if estado == "offline":
-                return "Off-line", last_update
+                return "Off-line", last_update, etoday, None
             if estado in ("alarm", "error", "fault"):
-                return "Alarme", last_update
-            return (f"Sem dados ({estado})" if estado else "Sem dados"), last_update
+                return "Alarme", last_update, etoday, None
+            status_str = f"Sem dados ({estado})" if estado else "Sem dados"
+            return status_str, last_update, etoday, None
 
-    return "Não encontrado", ""
+    return "Não encontrado", "", None, None

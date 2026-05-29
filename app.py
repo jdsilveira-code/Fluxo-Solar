@@ -11,6 +11,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# http://localhost:8501
+# streamlit run app.py
 
 def inject_css():
     st.markdown(
